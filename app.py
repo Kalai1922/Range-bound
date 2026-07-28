@@ -1,12 +1,36 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-from niftystocks import ns
 
 st.set_page_config(layout="wide", page_title="Strategy 1 Scanner")
 
 st.title("📈 Strategy 1: Range-Bound Swing Scanner")
 st.write("Scans stocks in a 20%+ consolidated range near support, strictly filtered for **improving YoY Revenue & Net Profit**.")
+
+# Built-in Stock Lists (Crash-Proof)
+NIFTY_50 = [
+    "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", "BHARTIARTL.NS",
+    "INFY.NS", "ITC.NS", "SBIN.NS", "LTIM.NS", "LT.NS", "HINDUNILVR.NS",
+    "AXISBANK.NS", "KOTAKBANK.NS", "HCLTECH.NS", "M&M.NS", "SUNPHARMA.NS",
+    "TATAMOTORS.NS", "MARUTI.NS", "NTPC.NS", "POWERGRID.NS", "TITAN.NS",
+    "ULTRACEMCO.NS", "ASIANPAINT.NS", "ADANIENT.NS", "BAJFINANCE.NS",
+    "BAJAJFINSV.NS", "ONGC.NS", "TATASTEEL.NS", "JSWSTEEL.NS", "ADANIPORTS.NS",
+    "COALINDIA.NS", "GRASIM.NS", "TECHM.NS", "BPCL.NS", "HDFCLIFE.NS",
+    "HEROMOTOCO.NS", "EICHERMOT.NS", "DRREDDY.NS", "CIPLA.NS", "APOLLOHOSP.NS",
+    "WIPRO.NS", "DIVISLAB.NS", "TATACONSUM.NS", "SBILIFE.NS", "BRITANNIA.NS",
+    "BEL.NS", "TRENT.NS", "NESTLEIND.NS", "BAJAJ-AUTO.NS", "SHRIRAMFIN.NS"
+]
+
+NIFTY_BANK = [
+    "HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "KOTAKBANK.NS", "AXISBANK.NS", 
+    "INDUSINDBK.NS", "BANKBARODA.NS", "PNB.NS", "AUBANK.NS", "IDFCFIRSTB.NS",
+    "FEDERALBNK.NS", "BANDHANBNK.NS"
+]
+
+NIFTY_IT = [
+    "TCS.NS", "INFY.NS", "HCLTECH.NS", "WIPRO.NS", "TECHM.NS",
+    "LTIM.NS", "PERSISTENT.NS", "COFORGE.NS", "MPHASIS.NS", "LTTS.NS"
+]
 
 # Stock Selection Dropdown
 option = st.selectbox(
@@ -15,14 +39,11 @@ option = st.selectbox(
 )
 
 if option == "Nifty 50":
-    tickers = ns.get_nifty_50_with_ns()
+    tickers = NIFTY_50
 elif option == "Nifty Bank":
-    tickers = [
-        "HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "KOTAKBANK.NS", "AXISBANK.NS", 
-        "INDUSINDBK.NS", "BANKBARODA.NS", "PNB.NS", "AUBANK.NS", "IDFCFIRSTB.NS"
-    ]
+    tickers = NIFTY_BANK
 elif option == "Nifty IT":
-    tickers = ns.get_nifty_it_with_ns()
+    tickers = NIFTY_IT
 else:
     symbols_input = st.text_input(
         "Enter Custom Tickers (separated by commas)", 
@@ -35,7 +56,7 @@ st.info(f"Loaded {len(tickers)} stocks for scanning.")
 if st.button("Run Strategy 1 Scan"):
     results = []
     
-    with st.spinner("Scanning technical range & verifying financial growth (Revenue & Net Profit)..."):
+    with st.spinner("Scanning technical range & verifying financial growth..."):
         for symbol in tickers:
             try:
                 stock = yf.Ticker(symbol)
@@ -64,15 +85,12 @@ if st.button("Run Strategy 1 Scan"):
                     is_fundamentally_improving = False
 
                     if not financials.empty and financials.shape[1] >= 4:
-                        # Extract Revenue
                         rev_rows = [i for i in financials.index if 'Revenue' in i or 'Total Revenue' in i]
-                        # Extract Net Income / Net Profit
                         profit_rows = [i for i in financials.index if 'Net Income' in i or 'Net Income Common Stockholders' in i]
 
                         s_growth_val = None
                         p_growth_val = None
 
-                        # Calculate YoY Sales Growth (Latest Quarter vs 4 Quarters Ago)
                         if rev_rows:
                             r_now = financials.loc[rev_rows[0]].iloc[0]
                             r_prev = financials.loc[rev_rows[0]].iloc[3] if len(financials.loc[rev_rows[0]]) > 3 else None
@@ -80,7 +98,6 @@ if st.button("Run Strategy 1 Scan"):
                                 s_growth_val = ((r_now - r_prev) / r_prev) * 100
                                 sales_growth = f"{s_growth_val:.1f}%"
 
-                        # Calculate YoY Profit Growth (Latest Quarter vs 4 Quarters Ago)
                         if profit_rows:
                             p_now = financials.loc[profit_rows[0]].iloc[0]
                             p_prev = financials.loc[profit_rows[0]].iloc[3] if len(financials.loc[profit_rows[0]]) > 3 else None
@@ -88,11 +105,9 @@ if st.button("Run Strategy 1 Scan"):
                                 p_growth_val = ((p_now - p_prev) / p_prev) * 100
                                 profit_growth = f"{p_growth_val:.1f}%"
 
-                        # Require at least Revenue or Net Profit growth to be strictly positive (> 0%)
                         if (s_growth_val is not None and s_growth_val > 0) or (p_growth_val is not None and p_growth_val > 0):
                             is_fundamentally_improving = True
 
-                    # Only append if fundamental criteria is satisfied
                     if is_fundamentally_improving:
                         results.append({
                             "Symbol": symbol,
@@ -109,7 +124,7 @@ if st.button("Run Strategy 1 Scan"):
 
     if results:
         res_df = pd.DataFrame(results)
-        st.success(f"Found {len(res_df)} stock(s) passing technical and fundamental filters!")
+        st.success(f"Found {len(res_df)} stock(s) matching Strategy 1!")
         st.dataframe(res_df, use_container_width=True)
     else:
         st.info("No stocks currently match both technical range rules AND fundamental growth criteria.")
