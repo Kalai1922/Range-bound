@@ -255,7 +255,12 @@ if st.button("Run RBS Scan"):
                 continue
 
             # Must currently be sitting near support, on the 3rd-or-later touch
-            near_support = current_price <= best_candidate["support"] * (1 + level_tolerance)
+            # Must be genuinely AT support, not above it (too far) and not BELOW it (broken down).
+            # The lower bound was missing before, which let already-broken supports pass as "near."
+            near_support = (
+                best_candidate["support"] * (1 - level_tolerance) <= current_price
+                <= best_candidate["support"] * (1 + level_tolerance)
+            )
             is_3rd_plus_touch = best_candidate["support_touches"] >= 2  # 2 historical + this live one = 3rd+
             if not (near_support and is_3rd_plus_touch):
                 continue
